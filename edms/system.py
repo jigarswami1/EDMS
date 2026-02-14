@@ -186,11 +186,16 @@ class EDMS:
         document.versions.append(revision)
         return revision
 
+    def _effective_version(self, document: Document) -> DocumentVersion:
+        for version in reversed(document.versions):
+            if version.state == DocumentState.EFFECTIVE:
+                return version
+        raise EDMSStateError("Document has no effective version.")
+
     def controlled_print(self, user: User, document_id: str) -> ControlledPrint:
         self._assert_role(user, [Role.PRINT_CUSTODIAN, Role.QA_ADMIN, Role.SYSTEM_ADMIN])
-        version = self.documents[document_id].current_version()
-        if version.state != DocumentState.EFFECTIVE:
-            raise EDMSStateError("Only effective documents can be controlled-printed.")
+        document = self.documents[document_id]
+        version = self._effective_version(document)
 
         copy_number = len(version.controlled_prints) + 1
         print_copy = ControlledPrint(
@@ -218,25 +223,26 @@ class EDMS:
         self, user: User, document_id: str, print_id: str, note: str
     ) -> ControlledPrint:
         self._assert_role(user, [Role.PRINT_CUSTODIAN, Role.QA_ADMIN, Role.SYSTEM_ADMIN])
-        version = self.documents[document_id].current_version()
-        for print_copy in version.controlled_prints:
-            if print_copy.print_id == print_id:
-                print_copy.reconciled = True
-                print_copy.reconciliation_note = note
-                version.audit_trail.append(
-                    AuditEvent(
-                        "controlled_print_reconciled",
-                        user.user_id,
-                        utc_now(),
-                        {"print_id": print_id, "note": note},
+        document = self.documents[document_id]
+        for version in reversed(document.versions):
+            for print_copy in version.controlled_prints:
+                if print_copy.print_id == print_id:
+                    print_copy.reconciled = True
+                    print_copy.reconciliation_note = note
+                    version.audit_trail.append(
+                        AuditEvent(
+                            "controlled_print_reconciled",
+                            user.user_id,
+                            utc_now(),
+                            {"print_id": print_id, "note": note},
+                        )
                     )
-                )
-                return print_copy
+                    return print_copy
         raise EDMSStateError(f"Print copy '{print_id}' was not found.")
 
     def list_effective_documents(self) -> List[Document]:
         return [
             doc
             for doc in self.documents.values()
-            if doc.current_version().state == DocumentState.EFFECTIVE
+            if any(version.state == DocumentState.EFFECTIVE for version in doc.versions)
         ]
