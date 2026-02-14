@@ -140,3 +140,25 @@ Each controlled document follows a configurable state machine:
 - Full audit trail availability for inspections.
 - Zero unauthorized document approval or printing events.
 - Demonstrable Part 11 and GAMP-aligned validation package readiness.
+
+---
+
+## 8) Reference Implementation (Current Repository)
+
+This repository now includes a lightweight Python domain implementation of core EDMS behaviors:
+- Document creation and versioning
+- Lifecycle transitions (Draft → Review → Approval → Effective)
+- Role-based permission checks
+- Part 11-style re-authentication at approval
+- Controlled print issuance and reconciliation
+- Audit-trail event capture per version
+
+### Project structure
+- `edms/models.py`: Domain entities and enums.
+- `edms/system.py`: EDMS workflow service with state and permission enforcement.
+- `tests/test_system.py`: Unit tests covering happy path and key control failures.
+
+### Run tests
+```bash
+python -m unittest discover -s tests -p 'test_*.py' -v
+```
