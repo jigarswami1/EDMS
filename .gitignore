@@ -1,8 +1,2 @@
 __pycache__/
 *.pyc
-.pytest_cache/
-.venv/
-coverage.xml
-test_results.xml
-validation_summary.md
-artifacts/
