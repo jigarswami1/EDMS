@@ -1,25 +1,16 @@
-"""Pharmaceutical EDMS domain package."""
+"""Beginner-friendly EDMS starter package."""
 
-from .models import (
-    AuditEvent,
-    ControlledPrint,
-    Document,
-    DocumentState,
-    DocumentVersion,
-    Role,
-    Signature,
-    User,
-)
-from .system import EDMS
+from .models import AuditEvent, Document, DocumentState, Role, User
+from .system import EDMS, EDMSError, EDMSPermissionError, EDMSStateError
 
 __all__ = [
     "AuditEvent",
-    "ControlledPrint",
     "Document",
     "DocumentState",
-    "DocumentVersion",
     "EDMS",
+    "EDMSError",
+    "EDMSPermissionError",
+    "EDMSStateError",
     "Role",
-    "Signature",
     "User",
 ]
