@@ -103,6 +103,56 @@ class EDMSTestCase(unittest.TestCase):
                 "approve-pass",
             )
 
+    def test_effective_doc_remains_listed_during_draft_revision(self) -> None:
+        document = self.edms.create_document(
+            self.author, "Form", "Form", "QA", "Site-A", "v1"
+        )
+        self.edms.submit_for_review(self.author, document.document_id, "review")
+        self.edms.complete_review(self.reviewer, document.document_id, "good")
+        self.edms.approve_document(
+            self.approver, document.document_id, "approve", "approve-pass"
+        )
+
+        self.edms.revise_document(self.author, document.document_id, "v1.1 draft")
+
+        effective = self.edms.list_effective_documents()
+        self.assertEqual([document.document_id], [doc.document_id for doc in effective])
+
+    def test_controlled_print_uses_effective_version_when_revision_is_draft(self) -> None:
+        document = self.edms.create_document(
+            self.author, "Procedure", "SOP", "QA", "Site-A", "v1"
+        )
+        self.edms.submit_for_review(self.author, document.document_id, "review")
+        self.edms.complete_review(self.reviewer, document.document_id, "good")
+        self.edms.approve_document(
+            self.approver, document.document_id, "approve", "approve-pass"
+        )
+        self.edms.revise_document(self.author, document.document_id, "v1.1 draft")
+
+        print_copy = self.edms.controlled_print(self.printer, document.document_id)
+        self.assertEqual("v1.0", print_copy.source_version)
+
+    def test_reconcile_print_created_before_revision(self) -> None:
+        document = self.edms.create_document(
+            self.author, "Logbook", "Template", "MFG", "Site-B", "v1"
+        )
+        self.edms.submit_for_review(self.author, document.document_id, "review")
+        self.edms.complete_review(self.reviewer, document.document_id, "good")
+        self.edms.approve_document(
+            self.approver, document.document_id, "approve", "approve-pass"
+        )
+
+        print_copy = self.edms.controlled_print(self.printer, document.document_id)
+        self.edms.revise_document(self.author, document.document_id, "v1.1 draft")
+
+        reconciled = self.edms.reconcile_print_copy(
+            self.printer,
+            document.document_id,
+            print_copy.print_id,
+            "Returned after draft created",
+        )
+        self.assertTrue(reconciled.reconciled)
+
 
 if __name__ == "__main__":
     unittest.main()
