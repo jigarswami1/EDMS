@@ -31,8 +31,8 @@ def _b64url_decode(data: str) -> bytes:
     return base64.urlsafe_b64decode(data + pad)
 
 
-def hash_password(password: str, salt: bytes | None = None) -> str:
-    if len(password) < 12:
+def hash_password(password: str, salt: bytes | None = None, *, enforce_policy: bool = True) -> str:
+    if enforce_policy and len(password) < 12:
         raise AuthError("Password policy violation: minimum length is 12")
     salt = salt or secrets.token_bytes(16)
     digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 200_000)
@@ -40,8 +40,11 @@ def hash_password(password: str, salt: bytes | None = None) -> str:
 
 
 def verify_password(password: str, encoded: str) -> bool:
-    salt_hex, digest_hex = encoded.split(":", 1)
-    expected = hash_password(password, bytes.fromhex(salt_hex)).split(":", 1)[1]
+    try:
+        salt_hex, digest_hex = encoded.split(":", 1)
+        expected = hash_password(password, bytes.fromhex(salt_hex), enforce_policy=False).split(":", 1)[1]
+    except (ValueError, AuthError):
+        return False
     return hmac.compare_digest(expected, digest_hex)
 
 
@@ -79,15 +82,17 @@ def create_user(session: Session, username: str, password: str, role: Role) -> U
 
 
 def login(session: Session, username: str, password: str) -> str:
-    user = session.scalar(select(User).where(User.username == username))
+    user = session.scalar(select(User).where(User.username == username, User.is_active.is_(True)))
     if not user or not verify_password(password, user.password_hash):
         log_event(session, "LOGIN_FAILED", actor=username, metadata={})
         raise AuthError("Invalid username or password")
+
     now = datetime.now(timezone.utc)
     expires = now + timedelta(minutes=JWT_TTL_MINUTES)
     usr_session = UserSession(user_id=user.id, expires_at=expires)
     session.add(usr_session)
     session.flush()
+
     payload = {
         "sub": user.username,
         "role": user.role.value,
@@ -105,9 +110,17 @@ def validate_token(session: Session, token: str) -> dict:
     user = session.scalar(select(User).where(User.username == payload["sub"], User.is_active.is_(True)))
     if not user:
         raise AuthError("Unknown user")
-    sess = session.scalar(select(UserSession).where(UserSession.session_id == payload["sid"], UserSession.revoked.is_(False)))
+
+    sess = session.scalar(
+        select(UserSession).where(
+            UserSession.session_id == payload["sid"],
+            UserSession.revoked.is_(False),
+        )
+    )
     if not sess:
         raise AuthError("Session revoked")
+    if sess.expires_at < datetime.now(timezone.utc):
+        raise AuthError("Session expired")
     return payload
 
 

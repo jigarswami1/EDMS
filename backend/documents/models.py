@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Enum as SQLEnum, ForeignKey, Integer, String, Text
+
+from sqlalchemy import Boolean, Enum as SQLEnum, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.db.base import Base
+from backend.db.types import UTCDateTime, utcnow
 from backend.workflow.state_machine import DocumentState
 
 
@@ -18,7 +20,7 @@ class Document(Base):
     owner_username: Mapped[str] = mapped_column(String(100), nullable=False)
     state: Mapped[DocumentState] = mapped_column(SQLEnum(DocumentState), default=DocumentState.DRAFT, nullable=False)
     locked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow, nullable=False)
 
 
 class DocumentVersion(Base):
@@ -30,4 +32,4 @@ class DocumentVersion(Base):
     content: Mapped[str] = mapped_column(Text, nullable=False)
     checksum: Mapped[str] = mapped_column(String(128), nullable=False)
     created_by: Mapped[str] = mapped_column(String(100), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow, nullable=False)

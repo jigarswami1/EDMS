@@ -1,3 +1,0 @@
-<testsuite name="validation" tests="5" failures="0" errors="0" skipped="5">
-  <testcase classname="tests" name="environment_dependency_missing"/>
-</testsuite>
