@@ -192,6 +192,15 @@ class EDMS:
                 return version
         raise EDMSStateError("Document has no effective version.")
 
+    def _find_print_copy(
+        self, document: Document, print_id: str
+    ) -> tuple[DocumentVersion, ControlledPrint]:
+        for version in reversed(document.versions):
+            for print_copy in version.controlled_prints:
+                if print_copy.print_id == print_id:
+                    return version, print_copy
+        raise EDMSStateError(f"Print copy '{print_id}' was not found.")
+
     def controlled_print(self, user: User, document_id: str) -> ControlledPrint:
         self._assert_role(user, [Role.PRINT_CUSTODIAN, Role.QA_ADMIN, Role.SYSTEM_ADMIN])
         document = self.documents[document_id]
@@ -224,21 +233,18 @@ class EDMS:
     ) -> ControlledPrint:
         self._assert_role(user, [Role.PRINT_CUSTODIAN, Role.QA_ADMIN, Role.SYSTEM_ADMIN])
         document = self.documents[document_id]
-        for version in reversed(document.versions):
-            for print_copy in version.controlled_prints:
-                if print_copy.print_id == print_id:
-                    print_copy.reconciled = True
-                    print_copy.reconciliation_note = note
-                    version.audit_trail.append(
-                        AuditEvent(
-                            "controlled_print_reconciled",
-                            user.user_id,
-                            utc_now(),
-                            {"print_id": print_id, "note": note},
-                        )
-                    )
-                    return print_copy
-        raise EDMSStateError(f"Print copy '{print_id}' was not found.")
+        version, print_copy = self._find_print_copy(document, print_id)
+        print_copy.reconciled = True
+        print_copy.reconciliation_note = note
+        version.audit_trail.append(
+            AuditEvent(
+                "controlled_print_reconciled",
+                user.user_id,
+                utc_now(),
+                {"print_id": print_id, "note": note},
+            )
+        )
+        return print_copy
 
     def list_effective_documents(self) -> List[Document]:
         return [
