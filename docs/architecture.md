@@ -1,50 +1,37 @@
-# EDMS Architecture and Lifecycle Mapping
+# EDMS Architecture Baseline
 
-## Lifecycle States
+## Core backend modules
 
-The baseline EDMS lifecycle used for initial module boundaries:
+- `backend/domain/models.py`
+  - Canonical entities such as `Document`, `DocumentVersion`, `WorkflowInstance`,
+    `SignatureEvent`, `PrintEvent`, `AuditEntry`, and `RoleAssignment`.
+- `backend/api/routes.py`
+  - Route/action stubs for lifecycle operations and controlled print workflows.
+- `backend/workflows/state_machine.py`
+  - Transition policy for document states and guard function used by services.
+- `backend/*`
+  - Package boundaries for `documents`, `workflows`, `signatures`, `printing`,
+    `audit`, `auth`, and `reports` modules.
 
-1. **Draft**
-2. **In Review**
-3. **Approved / Rejected**
-4. **Effective**
-5. **Printed / Issued**
-6. **Reconciled**
-7. **Archived**
+## Lifecycle mapping
 
-## Module-to-Lifecycle Mapping
+1. **Draft**: document creation initiated.
+2. **In review**: review and comments in progress.
+3. **Approved**: reviewer/approver endorsement completed.
+4. **Effective**: active controlled version for operations.
+5. **Archived**: obsolete/retired version retained read-only.
 
-| Module | Primary Responsibility | Lifecycle States |
-| --- | --- | --- |
-| `documents` | Document master records and version control | Draft, In Review, Approved/Rejected, Effective, Archived |
-| `workflows` | Review routing, approval decisions, escalation | In Review, Approved/Rejected |
-| `signatures` | Signature intent and completion events | Approved/Rejected, Effective |
-| `printing` | Print request, issue, reconciliation control | Printed/Issued, Reconciled |
-| `audit` | Immutable event journaling for every transition | All states |
-| `auth` | Role assignment and permission enforcement | All states |
-| `reports` | Cross-module reporting and compliance outputs | Effective, Printed/Issued, Reconciled, Archived |
+The state machine currently enforces allowed transitions:
 
-## Core API Actions in Baseline
+- `draft -> in_review`
+- `in_review -> approved | rejected`
+- `rejected -> draft`
+- `approved -> effective`
+- `effective -> archived`
 
-Defined in `backend/api/routes.py`:
+## Extension points
 
-- Create draft
-- Submit review
-- Approve/reject
-- Make effective
-- Request print
-- Issue print
-- Reconcile print
-- Retrieve audit trail
-
-## Domain Entities in Baseline
-
-Defined in `backend/domain/models.py`:
-
-- `Document`
-- `DocumentVersion`
-- `WorkflowInstance`
-- `SignatureEvent`
-- `PrintEvent`
-- `AuditEntry`
-- `RoleAssignment`
+- Add authority checks before transition execution (role + site/department scope).
+- Link transition actions to immutable audit append operations.
+- Add signature manifestation storage for approval transitions.
+- Add controlled print issuance/reconciliation records to reporting exports.

@@ -1,36 +1,34 @@
-# EDMS Baseline
+# Pharmaceutical EDMS
 
-This repository contains a baseline scaffold for an Electronic Document Management System (EDMS).
+A compliant Electronic Document Management System (EDMS) starter focused on controlled pharmaceutical documentation workflows.
 
-## Project Structure
+## Step-by-step progress
 
-- `backend/`: domain entities and API stubs for EDMS lifecycle operations.
-- `frontend/`: placeholder for UI implementation.
-- `docs/`: architecture and design references.
-- `tests/`: automated test suites.
-- `infra/`: deployment, environment, and operations artifacts.
+This increment adds a formal workflow state-machine module and tests to enforce document lifecycle rules.
 
-## Local Run Steps
+## Repository structure
 
-1. Ensure Python 3.11+ is installed.
-2. (Optional) Create and activate a virtual environment.
-3. Validate syntax for the initial backend scaffold:
-   ```bash
-   python -m compileall backend
-   ```
-4. Run unit/integration tests once they are added:
-   ```bash
-   python -m unittest discover -s tests
-   ```
+- `backend/`
+  - `documents/`: document content and versioning services
+  - `workflows/`: lifecycle routing and state transition guards
+  - `signatures/`: electronic signature integration points
+  - `printing/`: controlled print issuance and reconciliation
+  - `audit/`: immutable audit trail interfaces
+  - `auth/`: role and authority checks
+  - `reports/`: inspection/reporting outputs
+  - `domain/models.py`: shared EDMS domain models
+  - `api/routes.py`: framework-agnostic API route stubs
+- `docs/`: architecture and compliance-oriented documentation
+- `tests/`: unit and integration test suites
+- `frontend/`: UI application placeholder
+- `infra/`: deployment/infrastructure placeholder
 
-## Architecture Boundaries
+## Run tests
 
-- **Documents** (`backend/documents`): source of truth for documents and versions.
-- **Workflows** (`backend/workflows`): review/approval orchestration and state transitions.
-- **Signatures** (`backend/signatures`): signature capture and verification events.
-- **Printing** (`backend/printing`): controlled printing and reconciliation operations.
-- **Audit** (`backend/audit`): append-only audit logging and trace retrieval.
-- **Auth** (`backend/auth`): identity context and authorization/role assignment.
-- **Reports** (`backend/reports`): read-oriented compliance and KPI reporting.
+```bash
+python -m unittest discover -s tests -p 'test_*.py'
+```
 
-See `docs/architecture.md` for module-to-lifecycle mapping.
+## Next development step
+
+Implement role-based authority checks and signature-linked approval handlers that call the workflow guard before state mutation.

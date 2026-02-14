@@ -9,6 +9,7 @@ from typing import Any
 from uuid import uuid4
 
 from backend.domain.models import Document, DocumentState, DocumentVersion, PrintEvent, SignatureEvent
+from backend.workflows import assert_transition_allowed
 
 
 @dataclass(frozen=True, slots=True)
@@ -98,6 +99,10 @@ class EDMSTestFoundation:
         document = self.documents[document_id]
         if document.state != DocumentState.IN_REVIEW:
             raise ValidationError("approval only allowed from in_review")
+        try:
+            assert_transition_allowed(document.state, DocumentState.APPROVED)
+        except ValueError as exc:
+            raise ValidationError(str(exc)) from exc
         document.state = DocumentState.APPROVED
         event = SignatureEvent(
             event_id=f"sig-{uuid4().hex[:8]}",
@@ -213,6 +218,10 @@ class EDMSTestFoundation:
         document = self.documents[document_id]
         if document.state != expected:
             raise ValidationError(f"expected state {expected.value}, got {document.state.value}")
+        try:
+            assert_transition_allowed(document.state, new_state)
+        except ValueError as exc:
+            raise ValidationError(str(exc)) from exc
         document.state = new_state
         self._log(document_id, actor_id, action, {"state": new_state.value})
 
